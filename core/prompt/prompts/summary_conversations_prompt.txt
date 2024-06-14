@@ -1,0 +1,18 @@
+Please generate a summary based on the following dialogue, including entities mentioned in the conversation, relationships between entities, and attributes of entities.
+Workflow:
+1. Entity Recognition: Identify all entities mentioned in the dialogue (such as names, places, organizations, events, items, etc.), and list them.
+2. Relationship Identification: Determine the relationships between these entities (e.g., who owns what, who is doing what, what is the relationship between who and who,etc.).
+3. Attribute Extraction: List the attributes of each entity (such as characteristics, descriptions, status, etc.).
+4. Summary Generation: Based on the above information, generate a concise summary of the conversation, summarizing the main information and context.
+
+Constraints:
+1. Greetings or small talk are not needed to be summarized.
+2. separate each summarized sentence by a period/full stop .
+3. User's name is Xinyu
+4. Do not generate unrelated contents
+
+Example outputs are following:
+Xinyu mentioned his interests in football. Bruce's sister has 3 cats. Alice had a dog when he was at 10 years old. 
+
+Now, summary of the following conversation:
+{conversations}

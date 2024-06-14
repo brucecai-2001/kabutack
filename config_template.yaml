@@ -1,0 +1,88 @@
+#YAML
+# RENAME THE FILE NAME AS config.yaml after you configure this
+Configured: False
+
+User_name: YOUR_NAME
+Assistant_name: ASSISTANT_NAME
+
+# CONFIGURE THIS
+# LLM configuration
+# platform should be openai, ollama, dashscope, it determines how you access the llm, check your llm's doc
+chat_llm:
+    platform: 
+    model_name: 
+    end_point:
+    api_key:
+
+task_llm:
+    platform:
+    model_name:
+    end_point:
+    api_key:
+
+multimodal_llm:
+    platform: 
+    model_name: 
+    end_point:
+    api_key:
+
+
+
+# prompt path
+greeting: core/prompt/prompts/greeting.txt
+chat: core/prompt/prompts/chat_prompt.txt
+task: core/prompt/prompts/task_prompt.txt
+summary_conversations: core/prompt/prompts/summary_conversations_prompt.txt
+
+
+# CONFIGURE THIS
+# function call configuration, positive means use the use, negative means do not use the tool
+tools:
+  calculator:
+    use: negative
+    description: Useful for when you need to answer questions about math. It takes two numbers each time, it support the following operations, add, minus, multiply, divide
+    input: operation, first_number, second_number
+
+  email:
+    use: negative
+    description: Send an email to the user. Useful for sending messages to user.
+    input: email_content
+    agent_email: THE EMAIL OF THE AGENT
+    agent_pass: THE PASSWORD OF THE AGENT
+    user_email: YOUR EMAIL
+  
+  search_engine:
+    use: negative
+    description: A search engine. Useful for when you need to answer questions about people, places, companies, facts, historical events, or other subjects. Input should be a search query.
+    subscription_key: BING API_KEY
+    end_point: BING ENDPOINT
+    input: query
+  
+  compare:
+    use: negative
+    description: Useful when compare two number, the result could be larger, smaller, equal
+    input: first_number, second_number
+
+
+
+# other configuration
+
+# CONFIGURE THIS
+# embedding
+dashscope:
+  key: DASHVECTOR API_KEY
+
+# CONFIGURE THIS
+# vector db service
+dashvector:
+  collection: User_INFO
+  key: DASHVECTOR API_KEY
+  endpoint: DASHVECTOR ENDPOINT
+
+# OPTIONAL
+# ASR & TTS
+Azure_SDK:
+  key: AZURE_SPEECH_API_KEY
+  region: AZURE_SPEECH_REGION
+  speech_synthesis_language: en-GB
+  speech_synthesis_voice_name: en-GB-OliviaNeural
