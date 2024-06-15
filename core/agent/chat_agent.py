@@ -1,6 +1,7 @@
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from fastapi import WebSocket
 
 from core.llm.model_factory import create_model
 from core.prompt.prompts import build_Prompt_chat, build_Prompt_greet
@@ -13,10 +14,11 @@ class ChatAgent:
     """
     responsible for small talks, support text and viusal modality
     """ 
-    # core agent components
-    history_conversations = []
 
-    def __init__(self) -> None:    
+    def __init__(self) -> None:
+        self.history_conversations = []
+        self.full_response = ""
+
         self.chat_llm = create_model(agent_config.get('chat_llm.platform'), 
                 agent_config.get('chat_llm.model_name'),
                 agent_config.get('chat_llm.end_point'),
@@ -35,7 +37,6 @@ class ChatAgent:
         print("chat agent exit")
         
     
-
     # 主动向用户打招呼
     def greet(self):
         """
@@ -53,10 +54,15 @@ class ChatAgent:
             logger.log("Error ", str(e))
             raise RuntimeError("chat agent greet failed")
     
-    # 自然语言聊天
-    def chat(self, memory: str, query: str, image = None) -> str:
+    
+    # 流式聊天
+    async def chat(self, 
+                   websocket: WebSocket,
+                   memory: str, 
+                   query: str, 
+                   image=None):
         """
-        chat with user, support text and viusal modality
+        chat with user
 
         Args:
             memory (str): the memory retrievaled from a vector database
@@ -64,47 +70,45 @@ class ChatAgent:
             image (str, optional): image path for visual modality
 
         Returns:
-            (str): the response to the user
+            None: Data is added to the shared response buffer.
         """
-        self.history_conversations.append(query)
+        self.full_response = ""
 
         # build chat prompt
         if memory == "none":
-            self.chat_prompt += ( "User says: " + query + "\n" )
+            self.chat_prompt += ("User says: " + query + "\n")
         else:
-            self.chat_prompt += ( "User says: " + query + "\n" )
-            self.chat_prompt += ( "Here are some history reference for this query. " + memory +"\n" )
+            self.chat_prompt += ("User says: " + query + "\n")
+            self.chat_prompt += ("Here are some history reference for this query: " + memory + "\n")
 
-        # call the model
-        # LLM
-        if image == None:
-            try:
-                chat_response = self.chat_llm.invoke(prompt=self.chat_prompt)
-                logger.log("Assistant", chat_response)
+        # call large model
+        try:
+            if image is None:
+                self.full_response = await self.chat_llm.invoke_stream(
+                                                websocket=websocket,
+                                                prompt=self.chat_prompt
+                                            )
+                
+            else:
+                self.full_response = await self.multimodal_llm.invoke_stream(
+                                                  websocket=websocket,
+                                                  prompt=self.chat_prompt, 
+                                                  image_path=image
+                                                )
+                
+        except Exception as e:
+            logger.log("Error ", str(e))
+            raise RuntimeError("chat agent chat failed")
 
-            except Exception as e:
-                logger.log("Error ", str(e))
-                raise RuntimeError("chat agent chat failed")
-            
-        # VLM
-        else:
-            try:
-                chat_response = self.multimodal_llm.invoke(prompt=self.chat_prompt, image_path=image)
-                logger.log("Assistant", chat_response)
-            except Exception as e:
-                logger.log("Error ", str(e))
-                raise RuntimeError("chat agent chat failed")
-
-        self.chat_prompt +=  ("Assistant responses to User: " + chat_response + "\n")
-        return chat_response
+        self.history_conversations.append(query)
+        self.chat_prompt += ("Assistant responses to User: " + self.full_response + "\n")
+        logger.log("Assistant", self.full_response)
     
-    
+
     def get_history_conversations(self):
         """
         Returns:
             (list): the history conversions with user in a chat session
         """
         return self.history_conversations
-        
-    
 

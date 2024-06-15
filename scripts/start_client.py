@@ -4,9 +4,9 @@ import threading
 import signal
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.client import Ternimal_Client
+from app.client import Client
 
-client = Ternimal_Client()
+client = Client()
 
 def signal_handler(sig, frame):
     print('Signal received, server is shutting down')

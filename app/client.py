@@ -1,8 +1,9 @@
-import requests
-import time
+import asyncio
+import websockets
+import json
 
 
-class Ternimal_Client:
+class Client:
     def __init__(self) -> None:
         self.mode = "chat"
 
@@ -24,58 +25,75 @@ class Ternimal_Client:
                 continue
             
             if self.mode == "chat":
-                response = self._send_chat(query)
-                print("🤖Assistant: " + response)
+                print("🤖Kabutack: ", end='')
+                asyncio.run(self._send_chat(query=query))
 
             elif self.mode == "task":
-                task_received = self._send_task(query)
-                if task_received:
-                    print("✅task sent")
-                    self._get_task_progress()
+                print("🤖Kabutack: ", end='')
+                asyncio.run(self._send_task(query=query))
 
-    def _send_chat(self, query):
-        header = {'Content-Type': 'application/json'}
-        data = {
-            "query": query,
-            "lanaguage": "English"
-        }
-        response = requests.post('http://127.0.0.1:9000/chat', headers=header, json=data)
 
-        r = response.json()
-        chat_response = r.get('chat_response')
-        return chat_response
-    
-    def _send_task(self, query):
-        header = {'Content-Type': 'application/json'}
-        data = {
-            "query": query,
-            "lanaguage": "English"
-        }
-        response = requests.post('http://127.0.0.1:9000/task', headers=header, json=data)
-
-        r = response.json()
-        task_received = r.get('task_received')
-        return task_received
-    
-    def _get_task_progress(self):
-        count=0
-        while  count<120:
-            time.sleep(1)
-            count = count + 1
+    async def _send_chat(self, query):
+        uri = "ws://0.0.0.0:8003/chat"
+        async with websockets.connect(uri) as websocket:
+            # 准备要发送的查询数据
+            data = {"query": query}
             
-            response = requests.get('http://127.0.0.1:9000/report_task')
-            json_data = response.json()
-            task_progress = json_data.get('task_progress')
-            observation = json_data.get('observation')
-            if task_progress == "None":
-                continue
-            if task_progress == "Finish":
-                break
-            print("Assistant: " + observation)
+            # 将数据转换为JSON格式的字符串
+            json_data = json.dumps(data)
+            
+            # 发送JSON数据
+            await websocket.send(json_data)
+            
+            try:
+                while True:
+                    message = await websocket.recv()                
+                    # 如果接收到"STOP"，可以在这里处理
+                    if message == "FINISHED":
+                        break
+                    print(message, end='', flush=True)
+
+            except websockets.exceptions.ConnectionClosed:
+                print("Connection closed")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+    
+
+    async def _send_task(self, query):
+        uri = "ws://0.0.0.0:8003/task"
+        async with websockets.connect(uri) as websocket:
+            # 准备要发送的查询数据
+            data = {"query": query}
+            
+            # 将数据转换为JSON格式的字符串
+            json_data = json.dumps(data)
+            
+            # 发送JSON数据
+            await websocket.send(json_data)
+            
+            try:
+                while True:
+                    message = await websocket.recv()
+                    # 如果接收到"FINISHED"，任务结束
+                    if message == "FINISHED":
+                        break
+                    print(f'''🤖Kabutack: {message}''', flush=True)
+                
+
+            except websockets.exceptions.ConnectionClosed:
+                print("Connection closed")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+    
 
     def shutdown(self):
         print("client closed")
 
+
+# if __name__ == "__main__":
+#     c = Client()
+#     c.run()
+    
 
             
             

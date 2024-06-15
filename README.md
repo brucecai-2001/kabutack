@@ -17,7 +17,7 @@ The current entire system is composed of three agents:
 <br>
 <br>
 
-![workflow](assets/components.png) 
+![workflow](assets/architecture.png) 
 
 <br>
 <br>
@@ -27,6 +27,8 @@ V1.5 feature
 1. Auto-GPT minimum system
 2. long-term memory
 3. ReAct based task solver
+
+6/15: supports streaming response🏄
 
 
 <br>
@@ -116,8 +118,8 @@ Then you may type the query in the terminal,  type "/chat_mode" or "/task_mode" 
 🚧 Token managements  
 🚧 Skills learning   
 🚧 Robotics agents  
-🚧 UI
-🚧 Improve task agent
+🚧 UI  
+🚧 Improve task agent  
 🚧 (opetional)Distributed agents server
 
 <br>

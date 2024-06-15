@@ -30,7 +30,7 @@ def build_Prompt_chat():
     chat_prompt += '\n'
     return chat_prompt
 
-def build_Prompt_task(task=None):
+def build_Prompt_task(task=None, memory=None):
     """
     build task prompt
     Returns:
@@ -41,8 +41,8 @@ def build_Prompt_task(task=None):
     task_prompt = task_prompt.replace('{tools}', desc)
     task_prompt = task_prompt.replace('{tool_names}', names)
     task_prompt = task_prompt.replace('{task}', task)
-    task_prompt += '\n'
-    task_prompt += '\n'
+    if memory is not None:
+        task_prompt += f'''Related Context: {memory} \n'''
     return task_prompt
 
 def build_Prompt_summary_conversations(conversations):

@@ -1,3 +1,5 @@
+from fastapi import WebSocket
+
 class BaseLLM:
     """
     base large model class
@@ -16,4 +18,17 @@ class BaseLLM:
         Raises:
             NotImplementedError: _description_
         """
-        raise NotImplementedError("Subclasses should implement this method")
+        raise NotImplementedError("Subclasses should implement invoke")
+    
+    async def invoke_stream(self,
+                            websocket: WebSocket,
+                            prompt: str, 
+                            image_path=None
+                        ):
+        """
+        stream llm calling, eg. for kimi, first sentence response in 0.7s
+        Args:
+            prompt (_type_): prompt to the llm
+            image_path (_type_, optional): image path
+        """
+        raise NotImplementedError("Subclasses should implement invoke_stream")

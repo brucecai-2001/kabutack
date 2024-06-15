@@ -6,15 +6,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.server import Server
 
-app = Server()
+server = Server()
 
 def signal_handler(sig, frame):
     print('Signal received, server is shutting down')
-    app.shutdown()
+    server.shutdown()
+    sys.exit()
 
 signal.signal(signal.SIGINT, signal_handler)
 
-t = threading.Thread(target=app.run)
+t = threading.Thread(target=server.run)
 
 t.start()
 
