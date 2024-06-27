@@ -12,7 +12,7 @@ class OpenAI_LLM(BaseLLM):
         super().__init__(model_name)
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         
-    def invoke(self, prompt: str, image_path=None) -> str:
+    def invoke(self, prompt: str, image_path=None, temp=0.5) -> str:
         """
         non stream llm calling
         Args:
@@ -32,7 +32,7 @@ class OpenAI_LLM(BaseLLM):
                             "content": prompt
                         }
                     ],
-                    temperature=0.5,  # set temp, it will determine the response stability
+                    temperature=temp,  # set temp, it will determine the response stability
                     stream=False
                 )
                 return completion.choices[0].message.content

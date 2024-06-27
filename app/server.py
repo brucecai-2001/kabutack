@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+import asyncio
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -67,18 +69,32 @@ class Server:
                     # out_language = data.get("output_lanaguage", "English")
 
                     # do memory retrieval
-                    memory = "none"
-                    if self._use_memory:
-                        memory = self._memory_agent.retrieval(user_query=query)
+                    # memory = "none"
+                    # if self._use_memory:
+                    #     memory = self._memory_agent.retrieval(user_query=query)
 
                     try:
                         # call task agent
-                        await self._task_agent.task(websocket=websocket, memory=memory, task_content=query)
+                        await self._task_agent.task(websocket=websocket, task_content=query)
 
                     except Exception as e:
                         print(f"Error: {e}")
                         await websocket.send_text(f"Error: {str(e)}")
 
+            except WebSocketDisconnect:
+                print("Client disconnected")
+
+        @self.app.websocket("/ping")
+        async def handle_ping(websocket: WebSocket):
+            await websocket.accept()
+            data = await websocket.receive_json()
+            print(data)
+            
+            try:
+                for i in range(5):
+                    await websocket.send_text("Ping: Server running")
+                    await asyncio.sleep(0.1)
+                await websocket.send_text("FINISHED")
             except WebSocketDisconnect:
                 print("Client disconnected")
 

@@ -1,73 +1,108 @@
 import os
 import importlib
-from core.tool import *
-from utils.config import agent_config
+from typing import Callable
 
-# a dictionary collects the tools
-# tool_name : tool
-_TOOLBOX = {}
+from core.tool.tools import *
+from core.tool.tool_retrieve import ToolRetriever
 
-# 定义装饰器
-def register_tool(func_name):
+from utils.func import check_and_save_to_csv
+
+# retrieve tool and save tool document
+__tool_retriever__ = ToolRetriever(topk=2)
+
+# a dictionary collects the tools to call
+__TOOLBOX__ = {}
+# a dictionary collects the tool's document
+__TOOLDOCS__ = {}
+#  a list collects tools name only
+__TOOLNAMES__ = []
+#  a list collects tools' brief description
+__TOOLDESC__ = []
+# a list collects the tool's import
+__TOOLIMPORTS__ = []
+
+
+DefaultImport = ["import os", 
+                 "import sys"]
+
+# define a decorator to register a tool
+def register_tool(func_name: str, # name of the function
+                  func_desc: str, # a detailed description of the function
+                  func_import: str,
+                  func_args: str, 
+                  func_return: str, 
+                  func_example: str = None # one or two use case
+                ):
     """
-    a decorator, label a tool
+    a decorator to register tool
     Args:
         func_name (str): the name of the tool
     """
     def decorator(func):
-        _TOOLBOX[func_name] = func
+        __TOOLBOX__[func_name] = func
+
+        __TOOLNAMES__.append(func_name)
+        
+        __TOOLIMPORTS__.append(func_import)
+
+        tool_description = "{name}: {description}\n Args: {args}"
+        __TOOLDESC__.append(tool_description.format(name=func_name, description=func_desc, args=func_args))
+
+        tool_doc = """Tool Name:{name}\n{description}\nParameters:\n{args}\nReturn:\n{returns}\nExample\n----------\n{example}"""
+        tool_doc = tool_doc.format(name=func_name, description=func_desc, args=func_args, returns=func_return, example=func_example)
+        __TOOLDOCS__[func_name] = tool_doc
+
         return func
     return decorator
 
-def register_all_tools(tool_directory='core/tool'):
+
+def register_all_tools(tool_directory='core/tool/tools'):
     """
     register the tools to the _TOOLBOX
     Args:
         tool_directory (str, optional): _description_. Defaults to 'core/tool'.
     """
+    # import every tool
     for filename in os.listdir(tool_directory):
-        if filename.endswith('.py') and filename != 'tool_manager.py':
-            module_name = f'core.tool.{filename[:-3]}'
+        if filename.endswith('.py'):
+            module_name = f'core.tool.tools.{filename[:-3]}'
             _ = importlib.import_module(module_name)
 
-def getToolsPrompt() -> str:
-    """
-    return the tools description, used in task prompt
-    Returns:
-        str: tools description
-    """
-    tools_desc = []
-    tools_desc.append(f'''1. Finish_task: finish_task(answer) -  You must use it if observation arrive at the final answer, return the answer to user''')
-    tools_names = []
-    tools_num = 2
-    # iterate the tools in the configuration file
-    for tool_name, tool_info in agent_config.config.get('tools', {}).items():
-        # check if the tool can be used
-        if tool_info.get('use') == 'positive':
-            # add the tool to the tools list
-            tools_desc.append(f'''{tools_num}. {tool_name}: {tool_name}({tool_info.get('input')}) -  {tool_info.get('description')}''')
-            tools_names.append(tool_name)
-            tools_num += 1
+    doc_to_upload = []
+    for name, doc in __TOOLDOCS__.items():
+        # new tool to be saved to csv
+        if check_and_save_to_csv(name, doc):
+            doc_to_upload.append(doc)
+    # upload to vector db
+    __save_docs__(doc_to_upload)
 
-    return '\n'.join(tools_desc), ','.join(tools_names)
-    
-def action(tool_name: str, parameters: dict) -> str:
-    """
-    call the tool based on the tool name chosen
-    Args:
-        tool_name (str): the name of the tool
-        parameters (dict): parameters from the task agent
+def getTool(tool_name: str) -> Callable:
+    return __TOOLBOX__[tool_name]
 
-    Raises:
-        ValueError: _description_
 
-    Returns:
-        observation: observation from the tool
-    """
-    if tool_name in _TOOLBOX:
-        return _TOOLBOX[tool_name](parameters)
-    else:
-        raise ValueError(f"No tool found with name: {tool_name}")
+def getToolsName() -> str:
+    return "\n".join(__TOOLNAMES__)
 
+def getToolsDesc() -> str:
+    return "\n".join(__TOOLDESC__)
+
+def getDefaultImport() -> str:
+    return "\n".join(DefaultImport)
+
+def getToolImport() -> str:
+    return "\n".join(__TOOLIMPORTS__)
+
+def retrieve_tool(subplan):
+    tools = __tool_retriever__.retrieve_tool(subplan)
+    return tools
+
+def __save_docs__(doc: list):
+    __tool_retriever__.save_docs(doc)
+
+
+
+
+# ---------------------------------------------------
+# ---------------------------------------------------
 # register the tools
 register_all_tools()

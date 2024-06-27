@@ -1,3 +1,4 @@
+SUMMARY_MEMORY = """
 Please generate a summary based on the following dialogue, including entities mentioned in the conversation, relationships between entities, and attributes of entities.
 Workflow:
 1. Entity Recognition: Identify all entities mentioned in the dialogue (such as names, places, organizations, events, items, etc.), and list them.
@@ -14,5 +15,6 @@ Constraints:
 Example outputs are following:
 Xinyu mentioned his interests in football. Bruce's sister has 3 cats. Alice had a dog when he was at 10 years old. 
 
-Now, summary of the following conversation:
+Now, summary of the following
 {conversations}
+"""

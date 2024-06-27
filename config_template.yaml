@@ -27,14 +27,6 @@ multimodal_llm:
     api_key:
 
 
-
-# prompt path
-greeting: core/prompt/prompts/greeting.txt
-chat: core/prompt/prompts/chat_prompt.txt
-task: core/prompt/prompts/task_prompt.txt
-summary_conversations: core/prompt/prompts/summary_conversations_prompt.txt
-
-
 # CONFIGURE THIS
 # function call configuration, positive means use the use, negative means do not use the tool
 tools:
@@ -75,10 +67,11 @@ dashscope:
 # CONFIGURE THIS
 # vector db service
 dashvector:
-  collection: User_INFO
-  key: DASHVECTOR API_KEY
-  endpoint: DASHVECTOR ENDPOINT
-
+  tool_collection: 
+  user_collection: 
+  key: 
+  endpoint:
+  
 # OPTIONAL
 # ASR & TTS
 Azure_SDK:

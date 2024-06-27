@@ -1,5 +1,6 @@
 import re
 import json
+from typing import Dict, Any
 
 # TODO: The output from the LLM is unstable, consider all edges ...
 class Parser:
@@ -9,22 +10,6 @@ class Parser:
     def __init__(self) -> None:
         pass
 
-    # def parse_chat_and_task_response(self, chat_response):
-    #     json_match = re.search(r'\{[^}]+\}', chat_response)
-    #     if json_match:
-    #         # Extract the JSON substring
-    #         json_str = json_match.group(0)
-    #         # Parse the JSON string
-    #         parsed_json = json.loads(json_str)
-            
-    #         # Access the parsed data
-    #         task_intend = parsed_json.get("task_intend")
-    #         chat_response = parsed_json.get("chat_response")
-    #         return task_intend, chat_response
-
-    #     else:
-    #         print("No JSON found in the text.")
-    #         return None, None
         
     def parse_task_response(self, thought_and_action):
 
@@ -51,6 +36,42 @@ class Parser:
                 action_json = json.loads(action_json_str + "}")  # 将字符串加载为JSON对象
 
         return thought, action_json.get('action'), action_json.get('action_input')
+    
+
+
+    def extract_json(self, json_str: str) -> Dict[str, Any]:
+        try:
+            json_dict = json.loads(json_str)
+        except json.JSONDecodeError:
+            input_json_str = json_str
+            if "```json" in json_str:
+                json_str = json_str[json_str.find("```json") + len("```json") :]
+                json_str = json_str[: json_str.find("```")]
+            elif "```" in json_str:
+                json_str = json_str[json_str.find("```") + len("```") :]
+                # get the last ``` not one from an intermediate string
+                json_str = json_str[: json_str.find("}```")]
+            try:
+                json_dict = json.loads(json_str)
+            except json.JSONDecodeError as e:
+                error_msg = f"Could not extract JSON from the given str: {json_str}.\nFunction input:\n{input_json_str}"
+                raise ValueError(error_msg) from e
+        return json_dict  # type: ignore
+    
+    def extract_code(self, code: str) -> str:
+        if "\n```python" in code:
+            start = "\n```python"
+        elif "```python" in code:
+            start = "```python"
+        else:
+            return code
+
+        code = code[code.find(start) + len(start) :]
+        code = code[: code.find("```")]
+        if code.startswith("python\n"):
+            code = code[len("python\n") :]
+        return code
+
     
     
 parser = Parser()

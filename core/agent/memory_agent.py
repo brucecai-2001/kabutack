@@ -5,16 +5,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import dashvector
 import dashscope
 
+from core.llm.model_factory import create_model
+from core.prompt.memory_prompt import SUMMARY_MEMORY
+
 from utils.log import logger
 from utils.config import agent_config
-from utils.func import get_time
-
-from core.llm.model_factory import create_model
-from core.prompt.prompts import build_Prompt_summary_conversations
+from utils.func import *
 
 class MemoAgent:
     """
-    The memeory agent, be responsible for the memory retrieval and chat summary
+    The memeory agent, for the memory retrieval and chat summary
     Use chromadb
     """
 
@@ -29,25 +29,13 @@ class MemoAgent:
         )
 
         try:
-            self.user_collection = self.db_client.get(agent_config.get('dashvector.collection'))
+            self.user_collection = self.__create_or_get_collection__(agent_config.get('dashvector.user_collection'))
             user_collection_status = self.user_collection.stats()
             self.total_doc_num = user_collection_status.output.partitions['default'].total_doc_count
 
-        except:
-            # 捕获到异常说明collection不存在，进行创建
-            print("Creating new collection")
-            ret = self.user_collection.create(
-                name=agent_config.get('dashvector.collection'),
-                dimension=1536,
-                metric='dotproduct',
-                dtype=float,
-                fields_schema={'date': str, 'memory': str},
-                timeout=-1
-            )
-            if ret:
-                print("Collection created successfully.")
-            else:
-                print("Failed to create collection.")
+        except Exception as e:
+            print(e)
+            
 
         self.llm = create_model(agent_config.get('task_llm.platform'), 
                                     agent_config.get('task_llm.model_name'),
@@ -56,6 +44,36 @@ class MemoAgent:
     
     def shutdown(self):
         print("memory agent exit")
+
+    def __create_or_get_collection__(self, collection_name: str):
+        """
+        Create a new collection
+        Args:
+            collection_name (str): name of the collection
+
+        Raises:
+            RuntimeError: _description_
+
+        Returns:
+            _type_: _description_
+        """
+        if not self.db_client.get(collection_name): 
+            print("Creating new collection")
+            ret = self.db_client.create(
+                    name=collection_name,
+                    dimension=1536,
+                    metric='dotproduct',
+                    dtype=float,
+                    fields_schema={'date': str, 'memory': str},
+                    timeout=-1
+            )
+            if ret:
+                print("Collection created successfully.")
+            else:
+                print("Failed to create collection.")
+                raise RuntimeError(" Failed to create tool collection")
+            
+        return self.db_client.get(collection_name)
     
     
     def retrieval(self, user_query: str):
@@ -96,7 +114,8 @@ class MemoAgent:
             conversations (str): _description_
         """
         # llm summaries the conversations
-        summary_prompt = build_Prompt_summary_conversations(conversations=conversations)
+        summary_prompt = SUMMARY_MEMORY.format(conversations=conversations)
+
         try:
             summary = self.llm.invoke(summary_prompt)
             logger.log("Memory persistence", summary)

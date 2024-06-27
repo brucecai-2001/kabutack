@@ -1,6 +1,7 @@
 import os
 import io
 import base64
+import csv
 
 from PIL import Image
 from datetime import datetime
@@ -52,3 +53,36 @@ def img_base64(image_path):
         img_base64 = base64.b64encode(img_byte_arr)
         img_base64_str = img_base64.decode('utf-8')  # 将字节数据转换为字符串
         return img_base64_str
+    
+    
+def save_to_csv(func_name, func_doc, csv_file):
+    with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        # 写入头部信息，如果文件是新创建的
+        if os.path.getsize(csv_file) == 0:
+            writer.writerow(['func_name', 'func_doc'])
+        # 写入函数名称和文档
+        writer.writerow([func_name, func_doc])
+
+def check_and_save_to_csv(func_name, func_doc):
+    csv_file = 'core/tool/tools_doc.csv'
+    # 检查CSV文件是否存在，如果不存在则创建
+    if not os.path.exists(csv_file):
+        with open(csv_file, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(['func_name', 'func_doc'])  # 写入头部信息
+
+    try:
+        with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            # 检查工具文档是否已在CSV中
+            for row in reader:
+                if row['func_name'] == func_name:
+                    return False  # 工具已保存
+
+            # 如果工具文档不在CSV中，保存到CSV
+            save_to_csv(func_name, func_doc, csv_file)
+            return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False

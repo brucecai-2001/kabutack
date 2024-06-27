@@ -4,11 +4,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from fastapi import WebSocket
 
 from core.llm.model_factory import create_model
-from core.prompt.prompts import build_Prompt_chat, build_Prompt_greet
+from core.prompt.chat_prompt import (CHAT, GREET)
 
 from utils.config import agent_config
 from utils.log import logger
-
+from utils.func import *
 
 class ChatAgent:
     """
@@ -28,9 +28,6 @@ class ChatAgent:
                 agent_config.get('multimodal_llm.model_name'),
                 agent_config.get('multimodal_llm.end_point'),
                 agent_config.get('multimodal_llm.api_key'))
-    
-        self.chat_prompt = build_Prompt_chat()
-        
         return
     
     def shutdown(self):
@@ -42,7 +39,10 @@ class ChatAgent:
         """
         greet to user
         """
-        greeting_prompt = build_Prompt_greet()
+
+        # build greeting prompt
+        time_now = get_time()
+        greeting_prompt = GREET.format(time=time_now)
 
         try:
             greeting_response = self.chat_llm.invoke(greeting_prompt)
@@ -73,12 +73,16 @@ class ChatAgent:
             None: Data is added to the shared response buffer.
         """
         self.full_response = ""
+        self.history_conversations.append("User says: " + query)
 
         # build chat prompt
+        time_now = get_time()
+        history_conversations = "\n".join(self.history_conversations)
+        self.chat_prompt = CHAT.format(time=time_now, conversations=history_conversations)
+        
         if memory == "none":
-            self.chat_prompt += ("User says: " + query + "\n")
+            pass
         else:
-            self.chat_prompt += ("User says: " + query + "\n")
             self.chat_prompt += ("Here are some history reference for this query: " + memory + "\n")
 
         # call large model
@@ -100,8 +104,7 @@ class ChatAgent:
             logger.log("Error ", str(e))
             raise RuntimeError("chat agent chat failed")
 
-        self.history_conversations.append(query)
-        self.chat_prompt += ("Assistant responses to User: " + self.full_response + "\n")
+        self.history_conversations.append("Assistant responses to User: " + self.full_response)
         logger.log("Assistant", self.full_response)
     
 

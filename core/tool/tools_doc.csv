@@ -1,0 +1,22 @@
+func_name,func_doc
+search_engine,"Tool Name:search_engine
+Search the internet for timeliness information related to the task. It will return a summary related to the query in a text string or a number depends on the downstream applications. **Instruction**: The search engine can not handle Vague query, for query like finding data across several years, places, things, you should search them one by one, split the query into many small queries and call this function multiple times.
+Parameters:
+search_query (str): the query sent to the search engine
+return_type (str): the expected return type, one of 'text' or 'number' 
+Return:
+summary (Union[str, float]): a inforamtion collects from the internet, could be a float number or a string of text
+Example
+----------
+'Beijing is the capital of China' = search_engine(query='what is the capital of China?', return_type: 'text')
+or
+333.0 = search_engine(query='what is the height of tokyo tower in meters?', return_type: 'number')"
+email,"Tool Name:email
+Email could be used to contact with user.
+Parameters:
+email_content (str): the content sent to user through email
+Return:
+NoneType
+Example
+----------
+email(email_content='Hi, How are you today?')"

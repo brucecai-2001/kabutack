@@ -5,14 +5,15 @@
 
 # Kabutack
 
-A **mini Auto-GPT** like multimodality AI assistant. It is designed for engaging in personalized communication with user and performing some simple tasks. It will the core component of my Robotics system include a desktop robot, robotics dog, home AGV and robotics arm.
+A **mini Auto-GPT**: like multimodality AI assistant. It is designed for engaging in personalized communication with user and performing some simple tasks. It will the core component of my Robotics system include a desktop robot, robotics dog, home AGV and robotics arm.
 
 The current entire system is composed of three agents: 
-* 💬**chat agent**, which is responsible for receiving users' regular chat requests and sending some greetings to users during set time periods. 
+* 💬**chat agent**: which is responsible for receiving users' regular chat requests and sending some greetings to users during set time periods. 
 
-* 🤖**task agent**, which employs a **ReAct** paradigm to perform user's task request by calling a predefined tools step by syep. 
+* 🤖**task agent**: which employs a **ReAct** paradigm to perform user's task request by calling a predefined tools step by syep. In v1.6,🧑‍💻**code interpreter agent** is introduced as part of the task agent, it supports local juypter kernel coding and execution based on the predefined functions. 
 
-* 🧠**memory agent**, which performs memory retrieval and conversations persistence, it is the implementation of the agent's long-term memory. Memory agent is optional.
+* 🧠**memory agent**: which performs memory retrieval and conversations persistence, it is the implementation of the agent's long-term memory. Memory agent is optional.
+
 
 <br>
 <br>
@@ -23,13 +24,16 @@ The current entire system is composed of three agents:
 <br>
 
 # Version
-V1.5 feature
+👋V1.5 feature
 1. Auto-GPT minimum system
 2. long-term memory
 3. ReAct based task solver
 
 6/15: supports streaming response🏄
 
+👋V1.6 feature
+1. Rebuild Prompt construction, system is faster🚀
+2. task agent supports local code interpreter
 
 <br>
 <br>
@@ -40,7 +44,7 @@ V1.5 feature
 1. Server accepts user's query, if memory agent is employed, then the query will be sent to the memory agent to retrieval the related memory related to the current query such as user's preference.
 2. According to the user's intent(/chat_mode or /task_mode), the query and memory(if there is one) will be routed to the corresponding agent.
 3. chat agent's chat function will give response to user directly
-4. task agent accepts user's task and return, the tasks progress will be stored in a task progress queue, user client will get task progress from the queue util the task is finished.
+4. task agent accepts user's task and perform task by either react agent or code agent.
 
 <br>
 <br>
@@ -114,12 +118,12 @@ Then you may type the query in the terminal,  type "/chat_mode" or "/task_mode" 
 
 # Developing
 
+🚧 Keep Improving task agent  
 🚧 Improved ASR & TTS, azure asr and tts are provided in utils/audio.py, you could use it by providing the api-keys  
 🚧 Token managements  
 🚧 Skills learning   
 🚧 Robotics agents  
-🚧 UI  
-🚧 Improve task agent  
+🚧 UI    
 🚧 (opetional)Distributed agents server
 
 <br>

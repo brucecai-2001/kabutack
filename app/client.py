@@ -11,9 +11,11 @@ class Client:
            
         print("🚀Go ahead:")
         print("💬/chat_mode: switch to chat mode")
-        print("🔧/task_mode: switch to task mode\n")
+        print("🔧/task_mode: switch to task mode")
+        print("✅/ping: test connection\n")
+
         while(1):
-            query = input("🧑User: ")
+            query = input("\n🧑User: ")
 
             if query.startswith("/chat_mode"):
                 self.mode = "chat"
@@ -23,13 +25,15 @@ class Client:
                 self.mode = "task"
                 print("✅switch to task mode")
                 continue
+            elif query.startswith("/ping"):
+                asyncio.run(self._send_ping())
+                continue
             
             if self.mode == "chat":
                 print("🤖Kabutack: ", end='')
                 asyncio.run(self._send_chat(query=query))
 
             elif self.mode == "task":
-                print("🤖Kabutack: ", end='')
                 asyncio.run(self._send_task(query=query))
 
 
@@ -78,6 +82,33 @@ class Client:
                     if message == "FINISHED":
                         break
                     print(f'''🤖Kabutack: {message}''', flush=True)
+                
+
+            except websockets.exceptions.ConnectionClosed:
+                print("Connection closed")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+
+    async def _send_ping(self):
+        uri = "ws://0.0.0.0:8003/ping"
+        async with websockets.connect(uri) as websocket:
+            # 准备要发送的查询数据
+            data = {"query": "ping"}
+            
+            # 将数据转换为JSON格式的字符串
+            json_data = json.dumps(data)
+            
+            # 发送JSON数据
+            await websocket.send(json_data)
+            
+            try:
+                while True:
+                    message = await websocket.recv()
+                    # 如果接收到"FINISHED"，任务结束
+                    if message == "FINISHED":
+                        break
+                    print(f'''✅: {message}''', flush=True)
                 
 
             except websockets.exceptions.ConnectionClosed:
