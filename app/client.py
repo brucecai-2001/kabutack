@@ -30,7 +30,6 @@ class Client:
                 continue
             
             if self.mode == "chat":
-                print("🤖Kabutack: ", end='')
                 asyncio.run(self._send_chat(query=query))
 
             elif self.mode == "task":
@@ -52,10 +51,10 @@ class Client:
             try:
                 while True:
                     message = await websocket.recv()                
-                    # 如果接收到"STOP"，可以在这里处理
+                    # 如果接收到"FINISHED"，可以在这里处理
                     if message == "FINISHED":
                         break
-                    print(message, end='', flush=True)
+                    print(f'''🤖Kabutack: {message}''', flush=True)
 
             except websockets.exceptions.ConnectionClosed:
                 print("Connection closed")
@@ -76,18 +75,35 @@ class Client:
             await websocket.send(json_data)
             
             try:
+                # receive task progress JSON from websocket format:
+                # {
+                #     "status": FINISHED or ACTING,
+                #     "success": True or False,
+                #     "return_type": "text", "plot, "file",
+                #     "result": message to user
+                # }
                 while True:
                     message = await websocket.recv()
-                    # 如果接收到"FINISHED"，任务结束
-                    if message == "FINISHED":
-                        break
-                    print(f'''🤖Kabutack: {message}''', flush=True)
+                    response_JSON = self.__parse_task_response__(message)
+                    # task finished, success or failed
+                    if response_JSON['status'] == "FINISHED":
+                        if response_JSON['success']:
+                            # task success
+                            if response_JSON['return_type'] == "text":  
+                                print(f'''🤖Kabutack: {response_JSON['result']}''', flush=True)
+                            break
+                        else:
+                            # task failed
+                            print(f'''🤖Kabutack: {response_JSON['result']}''', flush=True)
+                            break
+                    
+                    # task is progressing
+                    if response_JSON['return_type'] == "text":  
+                            print(f'''🤖Kabutack: {response_JSON['result']}''', flush=True)
                 
 
             except websockets.exceptions.ConnectionClosed:
                 print("Connection closed")
-            except Exception as e:
-                print(f"An error occurred: {e}")
 
 
     async def _send_ping(self):
@@ -120,10 +136,23 @@ class Client:
     def shutdown(self):
         print("client closed")
 
+    
+    def __parse_task_response__(self, response) -> dict:
+        """
+        response_dict = {
+            "status": status,
+            "success": success,
+            "return_type": return_type,
+            "result": result
+        }
+        Args:
+            response (str): JSON string
 
-# if __name__ == "__main__":
-#     c = Client()
-#     c.run()
+        Returns:
+            dict: JSON
+        """
+        response_JSON = json.loads(response)
+        return response_JSON
     
 
             

@@ -73,16 +73,12 @@ class Server:
                     # if self._use_memory:
                     #     memory = self._memory_agent.retrieval(user_query=query)
 
-                    try:
-                        # call task agent
-                        await self._task_agent.task(websocket=websocket, task_content=query)
-
-                    except Exception as e:
-                        print(f"Error: {e}")
-                        await websocket.send_text(f"Error: {str(e)}")
+                    # call task agent
+                    await self._task_agent.task(websocket=websocket, task_content=query)
 
             except WebSocketDisconnect:
                 print("Client disconnected")
+
 
         @self.app.websocket("/ping")
         async def handle_ping(websocket: WebSocket):
@@ -97,6 +93,7 @@ class Server:
                 await websocket.send_text("FINISHED")
             except WebSocketDisconnect:
                 print("Client disconnected")
+
 
     def shutdown(self):
         self._memory_agent.shutdown()

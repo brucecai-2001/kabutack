@@ -2,18 +2,21 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import asyncio
+import json
 from fastapi import WebSocket
 
 from core.llm.model_factory import create_model
 from core.tool.tool_utils import getTool, getToolsDesc, getDefaultImport, getToolImport, retrieve_tool
 from core.prompt.react_prompt import REACT
-from core.prompt.code_prompt import PLAN, CODE
+from core.prompt.code_prompt import PLAN, CODE, REFLECT
 
 from utils.config import agent_config
 from utils.parse import parser
 from utils.log import  logger
 from utils.code_interpreter import LocalCodeInterpreter
-        
+
+
+
 class ReActAgent:
     """
     This agent is responsible for the user's task query.
@@ -78,14 +81,22 @@ class ReActAgent:
                 logger.log("Assistant", thought_and_action)
             except Exception as e:
                 logger.log("Error ", str(e))
-                await websocket.send_text("FAILED")
+                progress = __build_task_response_JSON__(status="FINISHED", 
+                                                        success=False,
+                                                        return_type="text", 
+                                                        result=str(e))
+                await websocket.send_text(progress)
                 await asyncio.sleep(0.1)
                 raise RuntimeError("task agent inference or parse JSON failed" + str(e))
 
             # If agent has the answer, finish the task
             if finished == True:
                 answer = thought
-                await websocket.send_text(answer)
+                progress = __build_task_response_JSON__(status="FINISHED", 
+                                                        success=True,
+                                                        return_type="text", 
+                                                        result=answer)
+                await websocket.send_text(progress)
                 await asyncio.sleep(0.1)
                 await websocket.send_text("FINISHED")
                 await asyncio.sleep(0.1)
@@ -95,10 +106,18 @@ class ReActAgent:
             #Action and get onservation
             try:
                 observation = self.action(tool_name=action_name, parameters=action_input)
-                await websocket.send_text(observation)
+                progress = __build_task_response_JSON__(status="ACTING", 
+                                                        success=True,
+                                                        return_type="text", 
+                                                        result=observation)
+                await websocket.send_text(progress)
                 await asyncio.sleep(0.1)
 
             except Exception as e:
+                progress = __build_task_response_JSON__(status="FINISHED", 
+                                                        success=False,
+                                                        return_type="text", 
+                                                        result="action faled" + str(e))
                 raise RuntimeError("task agent calls tools failed" + str(e))
 
             #tell llm to continue based on previous t&o
@@ -106,9 +125,14 @@ class ReActAgent:
             self.task_prompt += f'''Observation : {observation} \n'''
 
     def action(self, tool_name: str, parameters: dict) -> str:
+        # Get tool from a tool_name:tool dictionary 
         tool = getTool(tool_name)
+        # get response from tool
         observation = tool(react_params=parameters)
         return str(observation)
+
+
+
 
 
 #TODO: DEBUG
@@ -138,7 +162,8 @@ class CodeAgent:
 
 
     def shutdown(self):
-        self.code_interpreter.close()
+        if self.code_interpreter is not None:
+            self.code_interpreter.close()
         print("code agent closed")
     
 
@@ -148,22 +173,31 @@ class CodeAgent:
         Args:
             task_content (str): User query
         """
-        # plan the task, generate related tools document
-        tool_docs = self._plan(task_content)
-
-        # genrate code
-        code = self._write_code(task_content=task_content, tool_docs=tool_docs)
+        try:
+            # plan the task, generate related tools document
+            tool_docs = self._plan(task_content)
+            # genrate code
+            code = self._write_code(task_content=task_content, tool_docs=tool_docs)
+        except Exception as e:
+            raise RuntimeError(e)
 
         # execute code in code interpreter
-        result = self._run_code(code)
-        if result.success:
-            stdout = '\n'.join(result.logs.stdout)
-            print(stdout)
-        else:
-            error = '\n'.join(result.logs.stderr)
-            #reflect and debug
+        retry = 0
+        exe_success = False
+        return_type = "text"
+        exe_result = ""
+        while not exe_success and retry < self.max_retries:
+            result = self._run_code(code)
+            if result.success:
+                exe_result = result.text(include_logs=True)
+                exe_success = True
+            else:
+                error = result.logs.stderr[-1]
+                #reflect and debug
 
+        # close interpreter and return
         self.code_interpreter.close()
+        return __build_task_response_JSON__(status="FINISHED", success=exe_success, return_type=return_type, result=exe_result)
 
 
     def _plan(self, task_content) -> str:
@@ -207,6 +241,7 @@ class CodeAgent:
         code = parser.extract_code(code)
         return code
     
+
     def _run_code(self, code: str):
         """
         Run the code in code interpreter
@@ -223,7 +258,32 @@ class CodeAgent:
         return result
 
 
-    def _debug():
+    def _debug(self, code, error):
         pass 
 
     
+
+def __build_task_response_JSON__(status: str, 
+                                 success: bool, 
+                                 return_type: str, 
+                                 result: str) -> str:
+    """
+    construct a task response for ReAct and Code agent.
+
+    Args:
+        status (str): the progress of the task
+        success (bool): if the operation success or not
+        return_type (str): the type of the task's response
+        result (str): the logs and text output of the task.s
+
+    Returns:
+        str: JSON format response
+    """
+    response_dict = {
+        "status": status,
+        "success": success,
+        "return_type": return_type,
+        "result": result
+    }
+    response_str = json.dumps(response_dict)
+    return response_str
