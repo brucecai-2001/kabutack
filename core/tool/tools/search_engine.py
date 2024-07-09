@@ -12,7 +12,7 @@ from typing import Union
                func_import="from core.tool.tools.search_engine import search_engine",
                func_args="""search_query (str): the query sent to the search engine\nreturn_type (str): the expected return type, one of 'text' or 'number' """,
                func_return="summary (Union[str, float]): a inforamtion collects from the internet, could be a float number or a string of text",
-               func_example="'Beijing is the capital of China' = search_engine(query='what is the capital of China?', return_type: 'text')\nor\n333.0 = search_engine(query='what is the height of tokyo tower in meters?', return_type: 'number')")
+               func_example="'Beijing is the capital of China' = search_engine(search_query='what is the capital of China?', return_type: 'text')\nor\n333.0 = search_engine(search_query='what is the height of tokyo tower in meters?', return_type: 'number')")
 def search_engine(search_query: str = None, 
                   return_type: str = None, 
                   react_params: dict = None) -> Union[str, float]:
@@ -59,6 +59,7 @@ def summary_internet(search_query: str, return_type: str, internet_snippets: str
                     agent_config.get('task_llm.model_name'),
                     agent_config.get('task_llm.end_point'),
                     agent_config.get('task_llm.api_key'))
+        # build prompt for different return types
         if return_type == "text":
             _summary_prompt = """I need to summary a  a task: {query} \
                                 The following are some information I found through search engine: \
@@ -74,7 +75,10 @@ def summary_internet(search_query: str, return_type: str, internet_snippets: str
             _summary_prompt = """I need to extract a key number related to a task: {query} \
                                 The following are some information I found through search engine: \
                                 {snippets} \
-                                Give the answer in a JSON.
+                                
+                                NOTE: The unit of data must be the International System of Units, not its derived unit.
+                                And The standard unit of currency is the yuan, and all amounts in ten thousand yuan or thousand yuan should be represented in yuan.
+                                Give the answer in a JSON. 
                                 ```json
                                     {
                                         "number": extract the key number required in the query.

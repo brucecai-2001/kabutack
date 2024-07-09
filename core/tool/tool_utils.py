@@ -22,8 +22,10 @@ __TOOLDESC__ = []
 __TOOLIMPORTS__ = []
 
 
-DefaultImport = ["import os", 
-                 "import sys"]
+DefaultLibs = ["import os",
+               "import sys",
+               "import requests",
+               "from bs4 import BeautifulSoup"]
 
 # define a decorator to register a tool
 def register_tool(func_name: str, # name of the function
@@ -86,8 +88,8 @@ def getToolsName() -> str:
 def getToolsDesc() -> str:
     return "\n".join(__TOOLDESC__)
 
-def getDefaultImport() -> str:
-    return "\n".join(DefaultImport)
+def getDefaultLibs() -> str:
+    return "\n".join(DefaultLibs)
 
 def getToolImport() -> str:
     return "\n".join(__TOOLIMPORTS__)

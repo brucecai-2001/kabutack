@@ -5,6 +5,9 @@ from utils.config import agent_config
 
 
 class ToolRetriever:
+    """
+    A dashvector client to retrieve the most related tool against user's query or task plan
+    """
     def __init__(self, topk):
         self.topk = topk
         self.db_client  = dashvector.Client(

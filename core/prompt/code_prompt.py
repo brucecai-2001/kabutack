@@ -32,6 +32,11 @@ CODE = """
 **User Request and Plan**:
 {user_request}
 
+**Library**:
+This is python libraries you can access to. You may call any of these libraries to help you complete the task.
+
+{libs}
+
 **Documentation**:
 This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task.
 
@@ -44,7 +49,6 @@ This is the documentation for the functions you have access to. You may call any
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized. All images are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
 5. **Execution**: call the generated function in the end and print a message indicates the task is done with result if any, be care with the resuit unit.
 
-
 **Input Code Snippet**:
 ```python
 # Your code here
@@ -53,27 +57,22 @@ This is the documentation for the functions you have access to. You may call any
 
 
 
-REFLECT = """
-**Role**: You are a reflection agent. Your job is to look at the original user request and the code produced and determine if the code satisfies the user's request. If it does not, you must provide feedback on how to improve the code. You are concerned only if the code meets the user request, not if the code is good or bad.
-
-**Context**:
-{context}
-
-**Plan**:
-{plan}
-
-**Code**:
-{code}
+FIX_BUG = """
+**Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting so you can run !pip install to install missing packages.
 
 **Instructions**:
-1. **Understand the User Request**: Read the user request and understand what the user is asking for.
-2. **Review the Plan**: Check the plan to see if it is a viable approach to solving the user request.
-3. **Review the Code**: Check the code to see if it solves the user request.
-4. DO NOT add any reflections for test cases, these are taken care of.
+Please re-complete the code to fix the error message. Here is the previous version:
+```python
+{code}
+```
 
-Respond in JSON format with the following structure:
+It raises this error:
+{error}
+
+
+Please fix the bug by follow the error information and return a JSON object with the following format:
 {{
-    "feedback": str # the feedback you would give to the coder and tester
-    "success": bool # whether the code and tests meet the user request
+    "reflections": str # any thoughts you have about the bug and how you fixed it
+    "code": str # the fixed code if any, else an empty string
 }}
 """

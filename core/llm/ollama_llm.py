@@ -9,7 +9,7 @@ class Ollama_LLM(BaseLLM):
     def __init__(self, model_name):
         super().__init__(model_name)
 
-    def invoke(self, prompt, image_path = None):
+    def invoke(self, prompt, image_path = None, temp=0.5):
         """call the llm
 
         Args:

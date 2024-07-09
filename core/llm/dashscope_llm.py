@@ -13,7 +13,7 @@ class DashScope_LLM(BaseLLM):
         super().__init__(model_name)
         self.api_key = api_key
     
-    def invoke(self, prompt, image_path=None):
+    def invoke(self, prompt, image_path=None, temp=0.5):
         """call the llm
 
         Args:

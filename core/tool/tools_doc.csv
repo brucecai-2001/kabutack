@@ -8,9 +8,9 @@ Return:
 summary (Union[str, float]): a inforamtion collects from the internet, could be a float number or a string of text
 Example
 ----------
-'Beijing is the capital of China' = search_engine(query='what is the capital of China?', return_type: 'text')
+'Beijing is the capital of China' = search_engine(search_query='what is the capital of China?', return_type: 'text')
 or
-333.0 = search_engine(query='what is the height of tokyo tower in meters?', return_type: 'number')"
+333.0 = search_engine(search_query='what is the height of tokyo tower in meters?', return_type: 'number')"
 email,"Tool Name:email
 Email could be used to contact with user.
 Parameters:

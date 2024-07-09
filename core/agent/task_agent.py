@@ -3,12 +3,13 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import asyncio
 import json
+import time
 from fastapi import WebSocket
 
 from core.llm.model_factory import create_model
-from core.tool.tool_utils import getTool, getToolsDesc, getDefaultImport, getToolImport, retrieve_tool
+from core.tool.tool_utils import getTool, getToolsDesc, getDefaultLibs, getToolImport, retrieve_tool
 from core.prompt.react_prompt import REACT
-from core.prompt.code_prompt import PLAN, CODE, REFLECT
+from core.prompt.code_prompt import PLAN, CODE, FIX_BUG
 
 from utils.config import agent_config
 from utils.parse import parser
@@ -71,6 +72,7 @@ class ReActAgent:
         for i in range(0, 8):
             # generate a thought and an action
             try:
+                # parse llm Response
                 thought_and_action = self.text_llm.invoke(self.task_prompt)
                 thought_and_action_JSON = parser.extract_json(thought_and_action)
                 finished = thought_and_action_JSON['finished']
@@ -81,7 +83,7 @@ class ReActAgent:
                 logger.log("Assistant", thought_and_action)
             except Exception as e:
                 logger.log("Error ", str(e))
-                progress = __build_task_response_JSON__(status="FINISHED", 
+                progress = build_task_response_JSON(status="FINISHED", 
                                                         success=False,
                                                         return_type="text", 
                                                         result=str(e))
@@ -92,7 +94,7 @@ class ReActAgent:
             # If agent has the answer, finish the task
             if finished == True:
                 answer = thought
-                progress = __build_task_response_JSON__(status="FINISHED", 
+                progress = build_task_response_JSON(status="FINISHED", 
                                                         success=True,
                                                         return_type="text", 
                                                         result=answer)
@@ -106,7 +108,7 @@ class ReActAgent:
             #Action and get onservation
             try:
                 observation = self.action(tool_name=action_name, parameters=action_input)
-                progress = __build_task_response_JSON__(status="ACTING", 
+                progress = build_task_response_JSON(status="ACTING", 
                                                         success=True,
                                                         return_type="text", 
                                                         result=observation)
@@ -114,7 +116,7 @@ class ReActAgent:
                 await asyncio.sleep(0.1)
 
             except Exception as e:
-                progress = __build_task_response_JSON__(status="FINISHED", 
+                progress = build_task_response_JSON(status="FINISHED", 
                                                         success=False,
                                                         return_type="text", 
                                                         result="action faled" + str(e))
@@ -140,7 +142,7 @@ class CodeAgent:
     """
     fork from andrew NG's vision agent
     """
-    def __init__(self) -> None:
+    def __init__(self, debug = False) -> None:
         self.plan_llm = create_model(agent_config.get('task_llm.platform'), 
                 agent_config.get('task_llm.model_name'),
                 agent_config.get('task_llm.end_point'),
@@ -151,11 +153,15 @@ class CodeAgent:
                 agent_config.get('code_llm.end_point'),
                 agent_config.get('code_llm.api_key'))
         
-        self.debug_llm = create_model(agent_config.get('code_llm.platform'), 
-                agent_config.get('code_llm.model_name'),
-                agent_config.get('code_llm.end_point'),
-                agent_config.get('code_llm.api_key'))
+        # If debug is needed
+        self.need_debug = debug
+        if self.need_debug:
+            self.debug_llm = create_model(agent_config.get('code_llm.platform'), 
+                    agent_config.get('code_llm.model_name'),
+                    agent_config.get('code_llm.end_point'),
+                    agent_config.get('code_llm.api_key'))
         
+        # jupyter kernel
         self.code_interpreter = LocalCodeInterpreter()
 
         self.max_retries = 3
@@ -173,11 +179,15 @@ class CodeAgent:
         Args:
             task_content (str): User query
         """
+        code = None
+
         try:
             # plan the task, generate related tools document
             tool_docs = self._plan(task_content)
+
             # genrate code
             code = self._write_code(task_content=task_content, tool_docs=tool_docs)
+            
         except Exception as e:
             raise RuntimeError(e)
 
@@ -187,17 +197,25 @@ class CodeAgent:
         return_type = "text"
         exe_result = ""
         while not exe_success and retry < self.max_retries:
+            retry += 1
+            # execute
             result = self._run_code(code)
             if result.success:
                 exe_result = result.text(include_logs=True)
                 exe_success = True
             else:
-                error = result.logs.stderr[-1]
+                error = result.logs.stderr
+                if self.need_debug == False:
+                    break
+
                 #reflect and debug
+                debugged_code = self._debug(code=code, error=error)
+                code = debugged_code
+
 
         # close interpreter and return
         self.code_interpreter.close()
-        return __build_task_response_JSON__(status="FINISHED", success=exe_success, return_type=return_type, result=exe_result)
+        return build_task_response_JSON(status="FINISHED", success=exe_success, return_type=return_type, result=exe_result)
 
 
     def _plan(self, task_content) -> str:
@@ -236,7 +254,8 @@ class CodeAgent:
         Returns:
             code (str): generated code
         """
-        code_prompt = CODE.format(user_request=task_content, docs=tool_docs)
+        default_libs = getDefaultLibs()
+        code_prompt = CODE.format(user_request=task_content, libs=default_libs, docs=tool_docs)
         code = self.code_llm.invoke(prompt=code_prompt,temp=0.0)
         code = parser.extract_code(code)
         return code
@@ -249,21 +268,27 @@ class CodeAgent:
         Args:
             code (str): generated code
         """
-        default_import = getDefaultImport()
         tools_import = getToolImport()
-        print(f"{default_import}\n{tools_import}\n{code}\n")
+        print(f"{tools_import}\n{code}\n")
         result = self.code_interpreter.exec_isolation(
-            f"{default_import}\n{tools_import}\n{code}\n"
+            f"{tools_import}\n{code}\n"
         )
         return result
 
 
     def _debug(self, code, error):
-        pass 
+        # build debug prompt
+        debug_prompt = FIX_BUG.format(code=code, error=error)
+
+        # debug code
+        debug_response = self.code_llm.invoke(prompt=debug_prompt,temp=0.0)
+        debugged_code = parser.extract_code(debug_response)
+        return debugged_code
 
     
 
-def __build_task_response_JSON__(status: str, 
+# Both ReAct and Code use this return format
+def build_task_response_JSON(status: str, 
                                  success: bool, 
                                  return_type: str, 
                                  result: str) -> str:
@@ -279,6 +304,7 @@ def __build_task_response_JSON__(status: str,
     Returns:
         str: JSON format response
     """
+
     response_dict = {
         "status": status,
         "success": success,

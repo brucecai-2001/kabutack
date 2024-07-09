@@ -58,6 +58,7 @@ class Parser:
                 raise ValueError(error_msg) from e
         return json_dict  # type: ignore
     
+    
     def extract_code(self, code: str) -> str:
         if "\n```python" in code:
             start = "\n```python"
