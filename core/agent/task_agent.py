@@ -204,7 +204,8 @@ class CodeAgent:
                 exe_result = result.text(include_logs=True)
                 exe_success = True
             else:
-                error = result.logs.stderr
+                error = result.error.traceback[-1]
+                print(error)
                 if self.need_debug == False:
                     break
 
